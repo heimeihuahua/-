@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>数据转换工具</title>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            font-weight: 300;
+        }
+        
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+        
+        .upload-section {
+            padding: 40px;
+            text-align: center;
+        }
+        
+        .upload-area {
+            border: 3px dashed #4facfe;
+            border-radius: 10px;
+            padding: 60px 20px;
+            margin: 20px 0;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: #f8f9fa;
+        }
+        
+        .upload-area:hover {
+            border-color: #667eea;
+            background: #e9ecef;
+            transform: translateY(-2px);
+        }
+        
+        .upload-area.dragover {
+            border-color: #667eea;
+            background: #e3f2fd;
+            transform: scale(1.02);
+        }
+        
+        .upload-icon {
+            font-size: 48px;
+            color: #4facfe;
+            margin-bottom: 15px;
+        }
+        
+        .file-input {
+            display: none;
+        }
+        
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            margin: 10px;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+        }
+        
+        .btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        .result-section {
+            padding: 20px;
+            display: none;
+        }
+        
+        .table-container {
+            overflow-x: auto;
+            margin: 20px 0;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+        }
+        
+        th, td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        th {
+            background: #f8f9fa;
+            font-weight: 600;
+            color: #333;
+        }
+        
+        tr:hover {
+            background: #f5f5f5;
+        }
+        
+        .status {
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+            text-align: center;
+            font-weight: 500;
+        }
+        
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .status.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        
+        .instructions {
+            background: #e3f2fd;
+            border-left: 4px solid #2196f3;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 0 8px 8px 0;
+        }
+        
+        .instructions h3 {
+            color: #1976d2;
+            margin-bottom: 10px;
+        }
+        
+        .instructions ul {
+            margin-left: 20px;
+        }
+        
+        .instructions li {
+            margin-bottom: 5px;
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                margin: 10px;
+                border-radius: 10px;
+            }
+            
+            .header h1 {
+                font-size: 2em;
+            }
+            
+            .upload-section {
+                padding: 20px;
+            }
+            
+            th, td {
+                padding: 8px 10px;
+                font-size: 14px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>数据转换工具</h1>
+            <p>BIO-TD-BJ-ARD</p>
+        </div>
+        
+        <div class="instructions">
+            <h3>使用说明：</h3>
+            <ul>
+                <li>上传包含Sample_ID，Sample_Name，Measured_Concentration，Project_ID，Task_Name，Parameter，ResultValue列的Excel文件</li>
+                <li>如有问题，请联系yuqi1.zhang@beonemed.com。</li>
+            </ul>
+        </div>
+        
+        <div class="upload-section">
+            <div class="upload-area" id="uploadArea">
+                <div class="upload-icon">📁</div>
+                <h3>点击或拖拽Excel文件到此区域</h3>
+                <p>支持 .xlsx 和 .xls 格式</p>
+                <input type="file" id="fileInput" class="file-input" accept=".xlsx,.xls">
+            </div>
+            <button class="btn" onclick="processFile()" id="processBtn" disabled>开始转换</button>
+            <button class="btn" onclick="downloadExcel()" id="downloadBtn" disabled>下载结果</button>
+        </div>
+        
+        <div id="status" class="status info" style="display: none;"></div>
+        
+        <div class="result-section" id="resultSection">
+            <h3>转换结果预览</h3>
+            <div class="table-container">
+                <table id="resultTable">
+                    <thead></thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let workbook = null;
+        let convertedData = null;
+        
+        // 初始化事件监听
+        document.addEventListener('DOMContentLoaded', function() {
+            const uploadArea = document.getElementById('uploadArea');
+            const fileInput = document.getElementById('fileInput');
+            
+            // 点击上传区域触发文件选择
+            uploadArea.addEventListener('click', function() {
+                fileInput.click();
+            });
+            
+            // 文件选择变化
+            fileInput.addEventListener('change', function(e) {
+                if (e.target.files.length > 0) {
+                    handleFile(e.target.files[0]);
+                }
+            });
+            
+            // 拖拽功能
+            uploadArea.addEventListener('dragover', function(e) {
+                e.preventDefault();
+                uploadArea.classList.add('dragover');
+            });
+            
+            uploadArea.addEventListener('dragleave', function(e) {
+                e.preventDefault();
+                uploadArea.classList.remove('dragover');
+            });
+            
+            uploadArea.addEventListener('drop', function(e) {
+                e.preventDefault();
+                uploadArea.classList.remove('dragover');
+                if (e.dataTransfer.files.length > 0) {
+                    handleFile(e.dataTransfer.files[0]);
+                }
+            });
+        });
+        
+        function handleFile(file) {
+            if (!file.name.match(/\.(xlsx|xls)$/i)) {
+                showStatus('请选择Excel文件（.xlsx 或 .xls 格式）', 'error');
+                return;
+            }
+            
+            showStatus('正在读取文件...', 'info');
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    workbook = XLSX.read(data, {type: 'array'});
+                    
+                    // 显示第一个工作表的信息
+                    const firstSheetName = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[firstSheetName];
+                    const jsonData = XLSX.utils.sheet_to_json(worksheet, {header: 1});
+                    
+                    if (jsonData.length === 0) {
+                        showStatus('Excel文件为空', 'error');
+                        return;
+                    }
+                    
+                    // 检查是否包含必要的列
+                    const headers = jsonData[0];
+                    const hasTaskName = headers.some(h => h && h.toString().toLowerCase().includes('task_name'));
+                    const hasParameter = headers.some(h => h && h.toString().toLowerCase().includes('parameter'));
+                    const hasResultValue = headers.some(h => h && h.toString().toLowerCase().includes('resultvalue'));
+                    const hasSampleID = headers.some(h => h && h.toString().toLowerCase().includes('sample_id'));
+                    
+                    if (!hasTaskName || !hasParameter) {
+                        showStatus('Excel文件中未找到Task_Name和Parameter列', 'error');
+                        return;
+                    }
+                    
+                    if (!hasResultValue) {
+                        showStatus('Excel文件中未找到ResultValue列', 'error');
+                        return;
+                    }
+                    
+                    if (!hasSampleID) {
+                        showStatus('Excel文件中未找到Sample_ID列', 'error');
+                        return;
+                    }
+                    
+                    showStatus(`文件读取成功！工作表: ${firstSheetName}, 行数: ${jsonData.length}`, 'success');
+                    document.getElementById('processBtn').disabled = false;
+                    
+                } catch (error) {
+                    showStatus('文件读取失败: ' + error.message, 'error');
+                }
+            };
+            
+            reader.onerror = function() {
+                showStatus('文件读取失败', 'error');
+            };
+            
+            reader.readAsArrayBuffer(file);
+        }
+        
+        function processFile() {
+            if (!workbook) {
+                showStatus('请先上传Excel文件', 'error');
+                return;
+            }
+            
+            showStatus('正在处理数据...', 'info');
+            
+            try {
+                const firstSheetName = workbook.SheetNames[0];
+                const worksheet = workbook.Sheets[firstSheetName];
+                const jsonData = XLSX.utils.sheet_to_json(worksheet, {header: 1});
+                
+                if (jsonData.length < 2) {
+                    showStatus('数据不足，至少需要表头和数据行', 'error');
+                    return;
+                }
+                
+                const headers = jsonData[0];
+                const dataRows = jsonData.slice(1);
+                
+                // 找到Task_Name、Parameter和ResultValue列的索引
+                const taskNameIndex = headers.findIndex(h => h && h.toString().toLowerCase().includes('task_name'));
+                const parameterIndex = headers.findIndex(h => h && h.toString().toLowerCase().includes('parameter'));
+                const resultValueIndex = headers.findIndex(h => h && h.toString().toLowerCase().includes('resultvalue'));
+                
+                // 找到Sample相关列的索引
+                const sampleIDIndex = headers.findIndex(h => h && h.toString().toLowerCase().includes('sample_id'));
+                const sampleNameIndex = headers.findIndex(h => h && h.toString().toLowerCase().includes('sample_name'));
+                const measuredConcentrationIndex = headers.findIndex(h => h && h.toString().toLowerCase().includes('measured_concentration'));
+                const projectIDIndex = headers.findIndex(h => h && h.toString().toLowerCase().includes('project_id'));
+                
+                if (taskNameIndex === -1 || parameterIndex === -1) {
+                    showStatus('未找到Task_Name或Parameter列', 'error');
+                    return;
+                }
+                
+                if (resultValueIndex === -1) {
+                    showStatus('未找到ResultValue列', 'error');
+                    return;
+                }
+                
+                if (sampleIDIndex === -1) {
+                    showStatus('未找到Sample_ID列', 'error');
+                    return;
+                }
+                
+                // 收集所有唯一的Task_Name_Parameter组合
+                const uniqueCombinations = new Set();
+                
+                dataRows.forEach(row => {
+                    if (row[taskNameIndex] && row[parameterIndex]) {
+                        const combination = `${row[taskNameIndex]}_${row[parameterIndex]}`;
+                        uniqueCombinations.add(combination);
+                    }
+                });
+                
+                // 创建新的表头 - 保留Sample相关列和Task_Name_Parameter组合
+                const newHeaders = ['#'];
+                
+                // 添加Sample相关列
+                if (sampleIDIndex !== -1) newHeaders.push(headers[sampleIDIndex]);
+                if (sampleNameIndex !== -1) newHeaders.push(headers[sampleNameIndex]);
+                if (measuredConcentrationIndex !== -1) newHeaders.push(headers[measuredConcentrationIndex]);
+                if (projectIDIndex !== -1) newHeaders.push(headers[projectIDIndex]);
+                
+                // 添加Task_Name_Parameter组合列
+                Array.from(uniqueCombinations).forEach(combination => {
+                    newHeaders.push(combination);
+                });
+                
+                // 按Sample_ID分组数据
+                const groupedBySample = {};
+                
+                dataRows.forEach(row => {
+                    const sampleID = row[sampleIDIndex];
+                    if (!sampleID) return;
+                    
+                    if (!groupedBySample[sampleID]) {
+                        groupedBySample[sampleID] = {
+                            sampleID: sampleID,
+                            sampleName: sampleNameIndex !== -1 ? row[sampleNameIndex] : '',
+                            measuredConcentration: measuredConcentrationIndex !== -1 ? row[measuredConcentrationIndex] : '',
+                            projectID: projectIDIndex !== -1 ? row[projectIDIndex] : '',
+                            combinations: {}
+                        };
+                    }
+                    
+                    // 为每个Task_Name_Parameter组合存储ResultValue
+                    const combination = `${row[taskNameIndex]}_${row[parameterIndex]}`;
+                    if (row[taskNameIndex] && row[parameterIndex] && row[resultValueIndex]) {
+                        groupedBySample[sampleID].combinations[combination] = row[resultValueIndex];
+                    }
+                });
+                
+                // 创建新的数据行
+                const newData = [newHeaders];
+                
+                // 为每个Sample_ID创建一行数据
+                Object.values(groupedBySample).forEach((sampleData, index) => {
+                    const newRow = [index + 1]; // 添加自动编号
+                    
+                    // 添加Sample相关数据
+                    if (sampleIDIndex !== -1) newRow.push(sampleData.sampleID);
+                    if (sampleNameIndex !== -1) newRow.push(sampleData.sampleName);
+                    if (measuredConcentrationIndex !== -1) newRow.push(sampleData.measuredConcentration);
+                    if (projectIDIndex !== -1) newRow.push(sampleData.projectID);
+                    
+                    // 为每个Task_Name_Parameter组合添加对应的ResultValue
+                    Array.from(uniqueCombinations).forEach(combination => {
+                        newRow.push(sampleData.combinations[combination] || '');
+                    });
+                    
+                    newData.push(newRow);
+                });
+                
+                convertedData = newData;
+                
+                // 显示结果表格
+                displayResultTable(newHeaders, newData.slice(1));
+                
+                showStatus(`数据处理完成！共生成 ${uniqueCombinations.size} 个新列`, 'success');
+                document.getElementById('downloadBtn').disabled = false;
+                
+            } catch (error) {
+                showStatus('数据处理失败: ' + error.message, 'error');
+            }
+        }
+        
+        function displayResultTable(headers, data) {
+            const table = document.getElementById('resultTable');
+            const thead = table.querySelector('thead');
+            const tbody = table.querySelector('tbody');
+            
+            // 清空表格
+            thead.innerHTML = '';
+            tbody.innerHTML = '';
+            
+            // 创建表头
+            const headerRow = document.createElement('tr');
+            headers.forEach(header => {
+                const th = document.createElement('th');
+                th.textContent = header || '';
+                headerRow.appendChild(th);
+            });
+            thead.appendChild(headerRow);
+            
+            // 创建数据行
+            data.forEach(rowData => {
+                const row = document.createElement('tr');
+                rowData.forEach(cell => {
+                    const td = document.createElement('td');
+                    td.textContent = cell || '';
+                    row.appendChild(td);
+                });
+                tbody.appendChild(row);
+            });
+            
+            // 显示结果区域
+            document.getElementById('resultSection').style.display = 'block';
+        }
+        
+        function downloadExcel() {
+            if (!convertedData) {
+                showStatus('没有可下载的数据', 'error');
+                return;
+            }
+            
+            try {
+                // 创建工作表
+                const ws = XLSX.utils.aoa_to_sheet(convertedData);
+                
+                // 设置单元格样式
+                const range = XLSX.utils.decode_range(ws['!ref']);
+                
+                // 设置所有单元格的字体和字号
+                for (let R = range.s.r; R <= range.e.r; ++R) {
+                    for (let C = range.s.c; C <= range.e.c; ++C) {
+                        const cell_address = {c: C, r: R};
+                        const cell_ref = XLSX.utils.encode_cell(cell_address);
+                        
+                        if (!ws[cell_ref]) continue;
+                        
+                        // 设置字体为Arial，字号为8
+                        ws[cell_ref].s = {
+                            font: {
+                                name: 'Arial',
+                                sz: 8
+                            }
+                        };
+                    }
+                }
+                
+                // 设置列宽自动调整
+                const colWidths = [];
+                for (let C = range.s.c; C <= range.e.c; ++C) {
+                    let maxLength = 0;
+                    for (let R = range.s.r; R <= range.e.r; ++R) {
+                        const cell_address = {c: C, r: R};
+                        const cell_ref = XLSX.utils.encode_cell(cell_address);
+                        
+                        if (ws[cell_ref]) {
+                            const cellValue = ws[cell_ref].v ? ws[cell_ref].v.toString() : '';
+                            maxLength = Math.max(maxLength, cellValue.length);
+                        }
+                    }
+                    // 根据内容长度设置列宽，最小宽度为8，最大宽度为50
+                    colWidths.push({wch: Math.min(Math.max(maxLength, 8), 50)});
+                }
+                
+                ws['!cols'] = colWidths;
+                
+                // 创建工作簿
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, '转换结果');
+                
+                // 生成Excel文件并下载
+                XLSX.writeFile(wb, '转换结果_' + new Date().toISOString().slice(0, 19).replace(/:/g, '-') + '.xlsx');
+                
+                showStatus('文件下载成功！', 'success');
+                
+            } catch (error) {
+                showStatus('下载失败: ' + error.message, 'error');
+            }
+        }
+        
+        function showStatus(message, type) {
+            const statusEl = document.getElementById('status');
+            statusEl.textContent = message;
+            statusEl.className = `status ${type}`;
+            statusEl.style.display = 'block';
+            
+            // 3秒后自动隐藏信息状态
+            if (type === 'info') {
+                setTimeout(() => {
+                    if (statusEl.textContent === message) {
+                        statusEl.style.display = 'none';
+                    }
+                }, 3000);
+            }
+        }
+    </script>
+</body>
+</html>
